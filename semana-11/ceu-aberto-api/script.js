@@ -1,4 +1,4 @@
-const botaoCelsius = document.querySelector("#botao-celsius");
+// const botaoCelsius = document.querySelector("#botao-celsius");
 const botaoFahrenheit = document.querySelector("#botao-fahrenheit");
 const cidadeSelect = document.querySelector("#cidade");
 const selo = document.querySelector("#selo");
