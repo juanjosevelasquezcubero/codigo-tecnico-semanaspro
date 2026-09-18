@@ -8,6 +8,8 @@ const condicao = document.querySelector("#condicao");
 const sensacao = document.querySelector("#sensacao");
 const umidade = document.querySelector("#umidade");
 const vento = document.querySelector("#vento");
+const botaoLocalizacao = document.querySelector("#botao-localizacao");
+const statusMessage = document.querySelector("#status");
 
 const idsPrevisao = [
   "temp-hoje",
@@ -26,20 +28,6 @@ const cidades = [
     selo: "Floripa",
     latitude: -27.5954,
     longitude: -48.548,
-    temperatura: 23,
-    condicao: "Parcialmente nublado",
-    sensacao: 24,
-    umidade: "61%",
-    vento: "12 km/h",
-    previsao: [
-      { id: "temp-hoje", max: 26, min: 16, condicao: "Parcialmente nublado" },
-      { id: "temp-segunda", max: 27, min: 17, condicao: "Predominantemente limpo" },
-      { id: "temp-terca", max: 24, min: 16, condicao: "Nublado" },
-      { id: "temp-quarta", max: 22, min: 15, condicao: "Chuva fraca" },
-      { id: "temp-quinta", max: 25, min: 16, condicao: "Parcialmente nublado" },
-      { id: "temp-sexta", max: 28, min: 17, condicao: "Céu limpo" },
-      { id: "temp-sabado", max: 29, min: 18, condicao: "Predominantemente limpo" },
-    ],
   },
   {
     value: "sao-paulo",
@@ -47,20 +35,6 @@ const cidades = [
     selo: "SP",
     latitude: -23.5505,
     longitude: -46.6333,
-    temperatura: 19,
-    condicao: "Nublado",
-    sensacao: 18,
-    umidade: "78%",
-    vento: "8 km/h",
-    previsao: [
-      { id: "temp-hoje", max: 21, min: 14, condicao: "Nublado" },
-      { id: "temp-segunda", max: 22, min: 15, condicao: "Chuva fraca" },
-      { id: "temp-terca", max: 20, min: 14, condicao: "Chuva" },
-      { id: "temp-quarta", max: 18, min: 13, condicao: "Nublado" },
-      { id: "temp-quinta", max: 23, min: 15, condicao: "Parcialmente nublado" },
-      { id: "temp-sexta", max: 25, min: 16, condicao: "Céu limpo" },
-      { id: "temp-sabado", max: 24, min: 16, condicao: "Parcialmente nublado" },
-    ],
   },
   {
     value: "rio-de-janeiro",
@@ -68,20 +42,6 @@ const cidades = [
     selo: "Rio",
     latitude: -22.9068,
     longitude: -43.1729,
-    temperatura: 27,
-    condicao: "Céu limpo",
-    sensacao: 28,
-    umidade: "55%",
-    vento: "14 km/h",
-    previsao: [
-      { id: "temp-hoje", max: 29, min: 21, condicao: "Céu limpo" },
-      { id: "temp-segunda", max: 30, min: 22, condicao: "Céu limpo" },
-      { id: "temp-terca", max: 28, min: 21, condicao: "Parcialmente nublado" },
-      { id: "temp-quarta", max: 26, min: 20, condicao: "Chuva fraca" },
-      { id: "temp-quinta", max: 27, min: 21, condicao: "Parcialmente nublado" },
-      { id: "temp-sexta", max: 31, min: 22, condicao: "Céu limpo" },
-      { id: "temp-sabado", max: 32, min: 23, condicao: "Céu limpo" },
-    ],
   },
 ];
 
@@ -121,101 +81,171 @@ function formatarData(iso) {
   return data.toLocaleDateString("pt-BR", { day: "numeric", month: "long" });
 }
 
+// iso = data da API, tipo "2026-09-14". indice = posição na previsão (0, 1, 2...).
 function nomeDoDia(iso, indice) {
+  // O primeiro card é sempre "Hoje", não o nome da semana.
   if (indice === 0) {
     return "Hoje";
   }
 
+  // T12:00:00 trava o horário no meio do dia. Sem isso, o fuso pode virar a data para ontem.
   const data = new Date(`${iso}T12:00:00`);
+  // weekday: "long" → "segunda-feira" em português (minúsculo).
   const nome = data.toLocaleDateString("pt-BR", { weekday: "long" });
+  // Primeira letra maiúscula: "Segunda-feira".
   return nome.charAt(0).toUpperCase() + nome.slice(1);
 }
 
 async function buscarTempo(cidade) {
-  // 1. Monte a URL da Open-Meteo com cidade.latitude e cidade.longitude
-  //    (a URL completa está no README)
-  //
-  // 2. try/catch:
-  //    - const response = await fetch(url)
-  //    - se !response.ok, throw new Error(`Erro HTTP: ${response.status}`)
-  //    - const dados = await response.json()
-  //    - return dados
-  //    - no catch: console.error("Falhou:", erro)
+  const url = `https://api.open-meteo.com/v1/forecast?latitude=${cidade.latitude}&longitude=${cidade.longitude}&current=temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,wind_speed_10m&daily=weather_code,temperature_2m_max,temperature_2m_min&timezone=America/Sao_Paulo&forecast_days=7`;
+  try {
+    const response = await fetch(url);
+
+    if (response.ok === false) {
+      throw new Error(`Erro HTTP: ${response.status}`);
+    }
+
+    const dados = await response.json();
+    console.log(dados);
+
+    return dados;
+  } catch (err) {
+    console.log(err);
+  }
 }
 
-function atualizarTela(chaveCidade, unidade) {
-  const cidade = cidades.find((item) => item.value === chaveCidade);
+function mostrarStatus(texto) {
+  statusMessage.textContent = texto;
+}
 
+function distanciaAte(cidade, latitude, longitude) {
+  //Quanto maio numero, mais distante está
+  return (
+    Math.abs(cidade.latitude - latitude) +
+    Math.abs(cidade.longitude - longitude)
+  );
+}
+
+function cidadeMaisProxima(latitude, longitude) {
+  let maisProxima = cidades[0];
+
+  for (let i = 1; i < cidades.length; i++) {
+    const cidade = cidades[i];
+
+    if (
+      distanciaAte(cidade, latitude, longitude) <
+      distanciaAte(maisProxima, latitude, longitude)
+    ) {
+      maisProxima = cidade;
+    }
+  }
+
+  return maisProxima;
+}
+
+function usarMinhaLocalizacao() {
+  if (!navigator.geolocation) {
+    mostrarStatus("Seu navegador não tem geolocalização.");
+    return;
+  }
+
+  navigator.geolocation.getCurrentPosition(
+    (position) => {
+      const cidade = cidadeMaisProxima(
+        position.coords.latitude,
+        position.coords.longitude,
+      );
+
+      cidadeSelect.value = cidade.value;
+      localStorage.setItem("cidade", cidade.value);
+      carregarCidade(cidade.value);
+    },
+    (error) => {
+      console.error(`Erro ${error.code}: ${error.message}`);
+    },
+    { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 },
+  );
+}
+
+async function carregarCidade(chaveCidade) {
+  const cidade = cidades.find((item) => item.value === chaveCidade);
+  const unidade = localStorage.getItem("unidadeTemperatura") || "celsius";
+
+  mostrarStatus("Carregando...");
+
+  climaAtual = await buscarTempo(cidade);
+
+  mostrarStatus("");
+
+  atualizarTela(cidade, climaAtual, unidade);
+}
+
+function atualizarTela(cidade, clima, unidade) {
   selo.textContent = cidade.selo;
   titulo.textContent = `Tempo em ${cidade.nome} hoje`;
-  condicao.textContent = cidade.condicao;
-  umidade.textContent = cidade.umidade;
-  vento.textContent = cidade.vento;
+
+  const temperaturaAgora = Math.round(clima.current.temperature_2m);
+  const sensacaoTermica = Math.round(clima.current.apparent_temperature);
+
+  umidade.textContent = `${clima.current.relative_humidity_2m}%`;
+  vento.textContent = `${Math.round(clima.current.wind_speed_10m)} km/h`;
+
+  condicao.textContent = traduzirCondicao(clima.current.weather_code);
 
   if (unidade === "fahrenheit") {
-    temperatura.textContent = `${paraFahrenheit(cidade.temperatura)} °F`;
-    sensacao.textContent = `${paraFahrenheit(cidade.sensacao)} °F`;
+    temperatura.textContent = `${paraFahrenheit(temperaturaAgora)} °F`;
+    sensacao.textContent = `${paraFahrenheit(sensacaoTermica)} °F`;
     botaoCelsius.classList.remove("ativa");
     botaoFahrenheit.classList.add("ativa");
   } else {
-    temperatura.textContent = `${cidade.temperatura} °C`;
-    sensacao.textContent = `${cidade.sensacao} °C`;
+    temperatura.textContent = `${temperaturaAgora} °C`;
+    sensacao.textContent = `${sensacaoTermica} °C`;
     botaoFahrenheit.classList.remove("ativa");
     botaoCelsius.classList.add("ativa");
   }
 
-  cidade.previsao.forEach((dia) => {
-    const elemento = document.querySelector(`#${dia.id}`);
+  idsPrevisao.forEach((el, indice) => {
+    const elemento = document.querySelector(`#${el}`);
+    const max = Math.round(clima.daily.temperature_2m_max[indice]);
+    const min = Math.round(clima.daily.temperature_2m_min[indice]);
 
     if (unidade === "fahrenheit") {
-      elemento.textContent = `${paraFahrenheit(dia.max)}° / ${paraFahrenheit(dia.min)}°`;
+      elemento.textContent = `${paraFahrenheit(max)} °F / ${paraFahrenheit(min)}°F`;
     } else {
-      elemento.textContent = `${dia.max}° / ${dia.min}°`;
+      elemento.textContent = `${max}° / ${min}°`;
     }
-
-    elemento.nextElementSibling.textContent = dia.condicao;
   });
-
-  // Adapte esta função para receber também o JSON da API (clima).
-  // Troque os números fixos da cidade pelos campos da Open-Meteo:
-  //   cidade.condicao        → traduzirCondicao(clima.current.weather_code)
-  //   cidade.umidade         → `${clima.current.relative_humidity_2m}%`
-  //   cidade.vento           → `${Math.round(clima.current.wind_speed_10m)} km/h`
-  //   cidade.temperatura     → Math.round(clima.current.temperature_2m)
-  //   cidade.sensacao        → Math.round(clima.current.apparent_temperature)
-  //   cidade.previsao        → idsPrevisao + clima.daily (time, weather_code, max e min)
-  // Atualize também o <h3> e o <time> de cada card com nomeDoDia e formatarData.
-}
-
-async function carregarCidade(chaveCidade) {
-  // 1. Encontre a cidade no array cidades
-  // 2. climaAtual = await buscarTempo(cidade)
-  // 3. Leia a unidade salva (ou "celsius")
-  // 4. Se climaAtual existir, chame atualizarTela com a cidade, o clima e a unidade
 }
 
 botaoCelsius.addEventListener("click", () => {
   localStorage.setItem("unidadeTemperatura", "celsius");
-  atualizarTela(cidadeSelect.value, "celsius");
+  const cidade = cidades.find((item) => item.value === cidadeSelect.value);
+  atualizarTela(cidade, climaAtual, "celsius");
   // Depois da API: use climaAtual e não busque de novo
 });
 
 botaoFahrenheit.addEventListener("click", () => {
   localStorage.setItem("unidadeTemperatura", "fahrenheit");
-  atualizarTela(cidadeSelect.value, "fahrenheit");
+  const cidade = cidades.find((item) => item.value === cidadeSelect.value);
+  atualizarTela(cidade, climaAtual, "fahrenheit");
   // Depois da API: use climaAtual e não busque de novo
 });
 
 cidadeSelect.addEventListener("change", () => {
   localStorage.setItem("cidade", cidadeSelect.value);
   const unidade = localStorage.getItem("unidadeTemperatura") || "celsius";
-  atualizarTela(cidadeSelect.value, unidade);
-  // Depois da API: chame carregarCidade(cidadeSelect.value)
+  carregarCidade(cidadeSelect.value);
+});
+
+botaoLocalizacao.addEventListener("click", () => {
+  usarMinhaLocalizacao();
 });
 
 const cidadeSalva = localStorage.getItem("cidade") || "florianopolis";
 const unidadeSalva = localStorage.getItem("unidadeTemperatura") || "celsius";
 
-cidadeSelect.value = cidadeSalva;
-atualizarTela(cidadeSalva, unidadeSalva);
+// cidadeSelect.value = cidadeSalva;
+// atualizarTela(cidadeSalva, unidadeSalva);
 // Depois da API: chame carregarCidade(cidadeSalva)
+cidadeSelect.value = cidadeSalva;
+carregarCidade(cidadeSalva);

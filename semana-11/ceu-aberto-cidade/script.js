@@ -85,14 +85,21 @@ function paraFahrenheit(celsius) {
 
 function atualizarTela(chaveCidade, unidade) {
   const cidade = cidades.find((item) => item.value === chaveCidade);
+
+  selo.textContent = cidade.selo;
+  titulo.textContent = `Tempo em ${cidade.nome} hoje`;
+  condicao.textContent = cidade.condicao;
+  umidade.textContent = cidade.umidade;
+  vento.textContent = cidade.vento;
+
   if (unidade === "fahrenheit") {
-    temperatura.textContent = `${paraFahrenheit(temperaturaAgora)} °F`;
-    sensacao.textContent = `${paraFahrenheit(sensacaoTermica)} °F`;
+    temperatura.textContent = `${paraFahrenheit(cidade.temperatura)} °F`;
+    sensacao.textContent = `${paraFahrenheit(cidade.sensacao)} °F`;
     botaoCelsius.classList.remove("ativa");
     botaoFahrenheit.classList.add("ativa");
   } else {
-    temperatura.textContent = `${temperaturaAgora} °C`;
-    sensacao.textContent = `${sensacaoTermica} °C`;
+    temperatura.textContent = `${cidade.temperatura} °C`;
+    sensacao.textContent = `${cidade.sensacao} °C`;
     botaoFahrenheit.classList.remove("ativa");
     botaoCelsius.classList.add("ativa");
   }
@@ -110,18 +117,22 @@ function atualizarTela(chaveCidade, unidade) {
 
 botaoCelsius.addEventListener("click", () => {
   localStorage.setItem("unidadeTemperatura", "celsius");
-  atualizarTela("celsius");
+  atualizarTela(cidadeSelect.value, "celsius");
 });
 
 botaoFahrenheit.addEventListener("click", () => {
   localStorage.setItem("unidadeTemperatura", "fahrenheit");
-  atualizarTela("fahrenheit");
+  atualizarTela(cidadeSelect.value, "fahrenheit");
 });
 
 cidadeSelect.addEventListener("change", () => {
+  localStorage.setItem("cidade", cidadeSelect.value);
+
   // Salve cidadeSelect.value no localStorage, na chave "cidade"
   // Leia a unidade salva (ou use "celsius")
   // Chame atualizarTela com a cidade escolhida e a unidade
+  const unidadeSalva = localStorage.getItem("unidadeTemperatura") || "celsius";
+  atualizarTela(cidadeSelect.value, unidadeSalva);
 });
 
 // Ao abrir a página:
@@ -131,4 +142,6 @@ cidadeSelect.addEventListener("change", () => {
 // - chame atualizarTela com os dois valores
 const unidadeSalva = localStorage.getItem("unidadeTemperatura") || "celsius";
 const cidadeSalva = localStorage.getItem("cidade") || "florianopolis";
+
+cidadeSelect.value = cidadeSalva;
 atualizarTela(cidadeSalva, unidadeSalva);

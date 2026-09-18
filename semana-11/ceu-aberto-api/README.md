@@ -20,3 +20,5 @@ A API devolve Celsius. `traduzirCondicao`, `formatarData` e `nomeDoDia` já est�
 - Trocar a cidade busca o clima de novo.
 - Clicar em °C / °F converte **sem** um novo `fetch`.
 - F5 mantém a última cidade e a última unidade.
+- Enquanto a API responde, a tela mostra **Carregando...**
+- **Usar minha localização** pede a posição no navegador e escolhe a cidade mais próxima.

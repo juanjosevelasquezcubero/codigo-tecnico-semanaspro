@@ -12,6 +12,11 @@
     <meta property="og:description" content="23 °C e céu parcialmente nublado. Previsão dos próximos 7 dias.">
     <meta property="og:image" content="floripa.jpg">
     <meta property="og:type" content="website">
+
+    <!-- O npm install só baixa o dayjs para node_modules. O navegador não usa require/import
+         neste arquivo: precisa carregar o JS pelo <script>, antes do script.js. -->
+    <script src="node_modules/dayjs/dayjs.min.js"></script>
+    <script src="node_modules/dayjs/locale/pt-br.js"></script>
     <script src="script.js" defer></script>
 
     <link rel="stylesheet" href="style.css">
